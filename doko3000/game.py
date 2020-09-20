@@ -359,6 +359,8 @@ class Round(Document):
             self['with_9'] = False
             # even if not logical too just keep the undo setting here too to keep the table/round-settings together
             self['allow_undo'] = True
+            # keep track of game phases aka states
+            self['state'] = 'none'
             # initialize
             self.reset(players=players)
         elif document_id:
@@ -458,6 +460,16 @@ class Round(Document):
         self.save()
 
     @property
+    def state(self):
+        # backward compatibility, might be changed once if stable
+        return self.get('state', 'none')
+
+    @state.setter
+    def state(self, value):
+        self['state'] = value
+        self.save()
+
+    @property
     def cards_timestamp(self):
         # backward compatibility
         if not self.get('cards_timestamp'):
@@ -534,7 +546,9 @@ class Round(Document):
         for player_id in self.players:
             self.game.players[player_id].save()
 
-        self.save()
+        self.state = 'new'
+        # self.state setter does saving too
+        # self.save()
 
     def calculate_cards_timestamp(self):
         """
@@ -629,7 +643,13 @@ class Round(Document):
 
     def increase_turn_count(self):
         self.turn_count += 1
-        self.save()
+        # set state here because the normal game begins with first played cards
+        if self.turn_count < len(self.cards):
+            self.state = 'normal'
+        else:
+            self.state = 'finished'
+        # self.state does saving too
+        # self.save()
 
     def increase_trick_count(self):
         self.trick_count += 1
@@ -672,7 +692,12 @@ class Round(Document):
         # store last current trick starting player
         self.current_player = self.current_trick.players[0]
         self.current_trick.reset()
-        self.save()
+        if self.turn_count == 0:
+            self.state == 'new'
+        else:
+            self.state = 'normal'
+        # self.state setter does saving
+        #self.save()
 
 
 class Table(Document):

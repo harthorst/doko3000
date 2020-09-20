@@ -118,14 +118,14 @@ $(document).ready(function () {
         check_sync(msg)
 
         // show results if finished
-        if (msg.round_finished) {
+        if (msg.state == 'finished') {
             socket.emit('need-final-result', {
                 player_id: player_id,
                 table_id: msg.table_id
             })
         }
         // check if round is freshly reset - if yes get cards
-        if (msg.round_reset) {
+        if (msg.state == 'new') {
             socket.emit('my-cards-please', {
                 player_id: player_id,
                 table_id: msg.table_id

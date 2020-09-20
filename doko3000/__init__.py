@@ -67,13 +67,11 @@ def who_am_i():
         player = game.players.get(current_user.get_id())
         if player:
             table = game.tables.get(player.table)
-            round_finished = False
-            round_reset = False
+            state = 'none'
             # if player already sits on a table inform client
             if table:
                 current_player_id = table.round.current_player
-                round_finished = table.round.is_finished()
-                round_reset = table.round.is_reset()
+                state = table.round.state
                 join_room(table.id)
                 table_id = table.id
                 sync_count = table.sync_count
@@ -86,8 +84,7 @@ def who_am_i():
                            'table_id': table_id,
                            'sync_count': sync_count,
                            'current_player_id': current_player_id,
-                           'round_finished': round_finished,
-                           'round_reset': round_reset},
+                           'state': state},
                           room=request.sid)
 
 
@@ -112,6 +109,8 @@ def played_card(msg):
         played_cards = table.round.get_played_cards()
         cards_timestamp = table.round.cards_timestamp
         sync_count = table.increase_sync_count()
+        # if table.round.is_finished():
+        #     table.round.state = 'finished'
         socketio.emit('played-card-by-user',
                       {'player_id': player.id,
                        'table_id': table.id,
@@ -263,7 +262,7 @@ def deal_cards_to_player(msg):
             # if one trick right now was finished the claim-trick-button should be displayed again
             trick_claiming_needed = table.round.turn_count % 4 == 0 and \
                                     table.round.turn_count > 0 and \
-                                    not table.round.is_finished()
+                                    table.round.state != 'finished'
             socketio.emit('your-cards-please',
                           {'player_id': player.id,
                            'turn_count': table.round.turn_count,
@@ -349,7 +348,7 @@ def claimed_trick(msg):
        player.id == current_user.get_id():
         if player.id in table.round.players:
             sync_count = table.increase_sync_count()
-            if not table.round.is_finished():
+            if not table.round.state == 'finished':
                 # when ownership changes it does at previous trick because normally there is a new one created
                 # so the new one becomes the current one and the reclaimed is the previous
                 if not len(table.round.current_trick.cards) == 0:
@@ -490,10 +489,7 @@ def round_finish(msg):
                                                    game=game,
                                                    number_of_rows=number_of_rows)},
                           room=table.id)
-        else:
-            socketio.emit('please-hold-the-line',
-                          {'table_id': table.id},
-                          room=request.sid)
+
 
 @socketio.on('request-round-reset')
 def request_round_reset(msg):
@@ -528,10 +524,6 @@ def round_reset(msg):
                           {'table_id': table.id,
                            'sync_count': sync_count},
                           room=table.id)
-        else:
-            socketio.emit('please-hold-the-line',
-                          {'table_id': table.id},
-                          room=request.sid)
 
 
 @socketio.on('request-undo')
@@ -567,10 +559,6 @@ def round_reset(msg):
             socketio.emit('grab-your-cards',
                           {'table_id': table.id},
                           room=table.id)
-        else:
-            socketio.emit('please-hold-the-line',
-                          {'table_id': table.id},
-                          room=request.sid)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -631,7 +619,7 @@ def table(table_id=''):
             # if one trick right now was finished the claim-trick-button should be displayed again
             trick_claiming_needed = table.round.turn_count % 4 == 0 and \
                                     table.round.turn_count > 0 and \
-                                    not table.round.is_finished()
+                                    table.round.state == 'finished'
             current_player_id = table.round.current_player
             cards_hand = player.get_cards()
             cards_table = table.round.current_trick.get_cards()
