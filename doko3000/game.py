@@ -520,8 +520,13 @@ class Round(Document):
         # cards per player depend on playing with '9'-cards or not
         self.cards_per_player = len(self.cards) // 4
 
+        # removing all cards from players
+        for player in self.players:
+            self.game.players[player].remove_all_cards()
+
         # first shuffling...
         self.shuffle()
+
         # ...then dealing - there might be some race condition which leads to one player not getting cards
         # - this while-loop-workaround might fix it hopefully
         while (len(self.game.players[self.players[0]].cards) + \
