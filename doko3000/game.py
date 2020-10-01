@@ -467,6 +467,7 @@ class Round(Document):
     @state.setter
     def state(self, value):
         self['state'] = value
+        print(self['state'])
         self.save()
 
     @property
@@ -609,17 +610,17 @@ class Round(Document):
         # current player is the next player
         return self.current_player
 
-    def is_finished(self):
-        """
-        check if round is over - reached when all cards are played
-        """
-        return len(self.cards) == self.turn_count
-
-    def is_reset(self):
-        """
-        check if round has been freshly reset
-        """
-        return self.turn_count == 0
+    # def is_finished(self):
+    #     """
+    #     check if round is over - reached when all cards are played
+    #     """
+    #     return len(self.cards) == self.turn_count
+    #
+    # def is_reset(self):
+    #     """
+    #     check if round has been freshly reset
+    #     """
+    #     return self.turn_count == 0
 
     def get_score(self):
         score = {}

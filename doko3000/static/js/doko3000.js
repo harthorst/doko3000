@@ -185,6 +185,7 @@ $(document).ready(function () {
     })
 
     socket.on('your-cards-please', function (msg) {
+        console.log(msg)
         current_player_id = msg.current_player_id
         cards_locked = false
         $('.mode-spectator').addClass('d-none')
